@@ -158,6 +158,82 @@ sudo systemctl restart httpd
 
 8. Run app in browser: http://server_name/petclinic/
 
+## Deploy on Azure Container Apps
+
+You can also deploy the frontend app on Azure Container Apps (ACA) which connects to the REST APP running on ACA.
+
+First you need to prepare the following resources in advance, and write down their names:
+
+* Resource Group (e.g. petclinic-on-aca-rg) where all resources are created
+* Azure Container Apps Environment (e.g. petclinic-on-aca-ae)
+* Azure Container Apps for REST APP (e.g. spring-petclinic-rest)
+* Azure Container Registry (e.g. cad8e921fd39acr)
+
+Then replace the following variables with your own values, along with the value for `ACA_PETCLINIC_FRONTEND` (e.g. angular-frontend):
+
+```bash
+# All azure resources are assumed in the same resource group
+RESOURCE_GROUP_NAME=<resource-group-name>
+ACA_ENV_NAME=<aca-env-name>
+ACA_PETCLINIC_REST=<aca-petclinic-rest>
+ACA_PETCLINIC_FRONTEND=<aca-petclinic-frontend>
+ACR_NAME=<acr-name>
+```
+
+Next run the following commands to deploy the frontend app on ACA:
+
+```
+# Retrieve URL of REST APP running on ACA
+REST_APP_URL=https://$(az containerapp show \
+    --resource-group ${RESOURCE_GROUP_NAME} \
+    --name ${ACA_PETCLINIC_REST} \
+    --query properties.configuration.ingress.fqdn -o tsv)
+
+# Clone frontend app
+git clone https://github.com/majguo/spring-petclinic-angular.git
+cd spring-petclinic-angular
+
+# Build and push image to ACR
+az acr login --name ${ACR_NAME}
+az acr build --registry ${ACR_NAME} --build-arg CONFIG_ENV=aca --image spring-petclinic-angular:latest .
+
+# Retrieve login information of ACR
+ACR_LOGIN_SERVER=$(az acr show \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name $ACR_NAME \
+    --query 'loginServer' \
+    --output tsv)
+ACR_USER_NAME=$(az acr credential show \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name $ACR_NAME \
+    --query 'username' \
+    --output tsv)
+ACR_PASSWORD=$(az acr credential show \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name $ACR_NAME \
+    --query 'passwords[0].value' \
+    --output tsv)
+
+# Create frontend app on ACA which connects to REST APP
+az containerapp create \
+    --name ${ACA_PETCLINIC_FRONTEND} \
+    --resource-group ${RESOURCE_GROUP_NAME} \
+    --environment ${ACA_ENV_NAME} \
+    --image ${ACR_LOGIN_SERVER}/spring-petclinic-angular:latest  \
+    --registry-server $ACR_LOGIN_SERVER \
+    --registry-username $ACR_USER_NAME \
+    --registry-password $ACR_PASSWORD \
+    --target-port 8080 \
+    --env-vars REST_APP_URL=${REST_APP_URL} \
+    --ingress 'external'
+
+# Output URL of frontend APP running on ACA
+echo https://$(az containerapp show \
+    --resource-group ${RESOURCE_GROUP_NAME} \
+    --name ${ACA_PETCLINIC_FRONTEND} \
+    --query properties.configuration.ingress.fqdn -o tsv)
+```
+
 ## Running unit tests
 
 Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).

@@ -60,6 +60,27 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ]
+            },
+            "aca": {
+              "budgets": [
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb"
+                }
+              ],
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "namedChunks": false,
+              "extractLicenses": true,
+              "vendorChunk": false,
+              "buildOptimizer": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.aca.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": ""
@@ -72,6 +93,9 @@
           "configurations": {
             "production": {
               "browserTarget": "spring-petclinic-angular:build:production"
+            },
+            "aca": {
+              "browserTarget": "spring-petclinic-angular:build:aca"
             }
           }
         },
@@ -85,6 +109,12 @@
           "builder": "@angular-devkit/build-angular:karma",
           "configurations": {
             "production": {
+              "sourceMap": false,
+              "codeCoverage": true,
+              "browsers": "ChromeHeadless",
+              "watch": false
+            },
+            "aca": {
               "sourceMap": false,
               "codeCoverage": true,
               "browsers": "ChromeHeadless",
